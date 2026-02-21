@@ -84,10 +84,10 @@ GRANT UNLIMITED TABLESPACE TO app;
 
 -- customers.customer_id sequence
 CREATE SEQUENCE app.customer_seq
-    START WITH 1 -- first value
-    INCREMENT BY 1 -- increase by
-    NOCACHE -- do not pre-allocate values in memory
-    NOCYCLE; -- do not restart when max value is reached
+    START WITH 1
+    INCREMENT BY 1
+    NOCACHE
+    NOCYCLE;
 
 -- orders.order_id sequence
 CREATE SEQUENCE app.order_seq
@@ -127,8 +127,8 @@ CREATE TABLE app.product_categories (
     category_name       VARCHAR2(100)   NOT NULL,
     created_at          TIMESTAMP       DEFAULT SYSTIMESTAMP NOT NULL,
     created_by          VARCHAR2(50)    DEFAULT 'SYSTEM' NOT NULL,
-    modified_at         TIMESTAMP       DEFAULT SYSTIMESTAMP NOT NULL,
-    modified_by         VARCHAR2(50)    DEFAULT 'SYSTEM' NOT NULL
+    modified_at         TIMESTAMP,
+    modified_by         VARCHAR2(50)
 );
 
 -- =====================================================
@@ -143,8 +143,8 @@ CREATE TABLE app.products (
     unit_price          NUMBER(10, 2)   NOT NULL,
     created_at          TIMESTAMP       DEFAULT SYSTIMESTAMP NOT NULL,
     created_by          VARCHAR2(50)    DEFAULT 'SYSTEM' NOT NULL,
-    modified_at         TIMESTAMP       DEFAULT SYSTIMESTAMP NOT NULL,
-    modified_by         VARCHAR2(50)    DEFAULT 'SYSTEM' NOT NULL
+    modified_at         TIMESTAMP,
+    modified_by         VARCHAR2(50)
 );
 
 -- =====================================================
@@ -157,8 +157,6 @@ CREATE TABLE app.products (
 CREATE TABLE app.products_x_category (
     item_id             NUMBER(5)       NOT NULL,
     category_id         NUMBER(5)       NOT NULL,
-    created_at          TIMESTAMP       DEFAULT SYSTIMESTAMP NOT NULL,
-    created_by          VARCHAR2(50)    DEFAULT 'SYSTEM' NOT NULL,
     -- Composite primary key: each product-category pair is unique
     CONSTRAINT pk_products_x_category
         PRIMARY KEY (item_id, category_id),
@@ -181,8 +179,8 @@ CREATE TABLE app.customers (
     country             VARCHAR2(50),
     created_at          TIMESTAMP       DEFAULT SYSTIMESTAMP NOT NULL,
     created_by          VARCHAR2(50)    DEFAULT 'SYSTEM' NOT NULL,
-    modified_at         TIMESTAMP       DEFAULT SYSTIMESTAMP NOT NULL,
-    modified_by         VARCHAR2(50)    DEFAULT 'SYSTEM' NOT NULL
+    modified_at         TIMESTAMP,
+    modified_by         VARCHAR2(50)
 );
 
 -- =====================================================
@@ -202,8 +200,8 @@ CREATE TABLE app.orders (
     additional_info     VARCHAR2(500),
     created_at          TIMESTAMP       DEFAULT SYSTIMESTAMP NOT NULL,
     created_by          VARCHAR2(50)    DEFAULT 'SYSTEM' NOT NULL,
-    modified_at         TIMESTAMP       DEFAULT SYSTIMESTAMP NOT NULL,
-    modified_by         VARCHAR2(50)    DEFAULT 'SYSTEM' NOT NULL,
+    modified_at         TIMESTAMP,
+    modified_by         VARCHAR2(50),
     CONSTRAINT fk_orders_customer
         FOREIGN KEY (customer_id)       REFERENCES app.customers(customer_id),
     -- Orders reference a product, not the other way around
@@ -226,7 +224,15 @@ CREATE OR REPLACE TRIGGER app.trg_orders_modified_at
     BEFORE UPDATE ON app.orders FOR EACH ROW
 BEGIN
     :NEW.modified_at := SYSTIMESTAMP;
-    :NEW.modified_by := 'SYSTEM';
+    :NEW.modified_by := USER;
+END;
+/
+
+CREATE OR REPLACE TRIGGER app.trg_orders_created_at
+    BEFORE INSERT ON app.orders FOR EACH ROW
+BEGIN
+    :NEW.created_at := SYSTIMESTAMP;
+    :NEW.created_by := USER;
 END;
 /
 
@@ -235,7 +241,14 @@ CREATE OR REPLACE TRIGGER app.trg_customers_modified_at
     BEFORE UPDATE ON app.customers FOR EACH ROW
 BEGIN
     :NEW.modified_at := SYSTIMESTAMP;
-    :NEW.modified_by := 'SYSTEM';
+    :NEW.modified_by := USER;
+END;
+/
+CREATE OR REPLACE TRIGGER app.trg_customers_created_at
+    BEFORE INSERT ON app.customers FOR EACH ROW
+BEGIN
+    :NEW.created_at := SYSTIMESTAMP;
+    :NEW.created_by := USER;
 END;
 /
 
@@ -244,7 +257,15 @@ CREATE OR REPLACE TRIGGER app.trg_products_modified_at
     BEFORE UPDATE ON app.products FOR EACH ROW
 BEGIN
     :NEW.modified_at := SYSTIMESTAMP;
-    :NEW.modified_by := 'SYSTEM';
+    :NEW.modified_by := USER;
+END;
+/
+
+CREATE OR REPLACE TRIGGER app.trg_products_created_at
+    BEFORE INSERT ON app.products FOR EACH ROW
+BEGIN
+    :NEW.created_at := SYSTIMESTAMP;
+    :NEW.created_by := USER;
 END;
 /
 

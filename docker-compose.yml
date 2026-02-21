@@ -153,6 +153,25 @@ services:
       "
     # This container should run once and not restart
     restart: "no"
+  # =========================
+  # PYTHON PRODUCER
+  # =========================
+  python:
+    build:
+      context: ./python
+      dockerfile: Dockerfile
+    container_name: python-producer
+    # Wait for Oracle to be ready before starting
+    depends_on:
+      - oracle
+    environment:
+      APP_USER: ${APP_USER}
+      APP_USER_PASSWORD: ${APP_USER_PASSWORD}
+      # Inside Docker network: use service name instead of localhost
+      ORACLE_DSN: oracle:1521/XEPDB1
+    # Don't auto-restart — we control when seed vs simulate runs
+    restart: "no"
+
 
 volumes:
   oracle_data:   # Oracle datafiles
