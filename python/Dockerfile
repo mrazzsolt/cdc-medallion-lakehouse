@@ -1,0 +1,53 @@
+# python/Dockerfile
+# Multi-stage build: keeps the final image small by separating
+# the dependency installation from the runtime environment.
+
+# ---------------------------------------------------------------
+# Stage 1: builder
+# Install dependencies into a virtual environment.
+# We do this in a separate stage so build tools (pip, gcc, etc.)
+# don't end up in the final image.
+# ---------------------------------------------------------------
+FROM python:3.12-slim AS builder
+
+# Set working directory inside the container
+WORKDIR /app
+
+# Copy only the requirements file first.
+# Docker caches each layer — if requirements.txt hasn't changed,
+# pip install won't re-run on the next build (faster rebuilds).
+COPY requirements.txt .
+
+# Create a virtual environment inside the container and install deps.
+# --no-cache-dir: don't store pip's download cache (saves space)
+# --upgrade pip: avoid outdated pip warnings
+RUN python -m venv /app/venv && \
+    /app/venv/bin/pip install --upgrade pip --no-cache-dir && \
+    /app/venv/bin/pip install --no-cache-dir -r requirements.txt
+
+
+# ---------------------------------------------------------------
+# Stage 2: runtime
+# Copy only what's needed to run the app — no build tools.
+# ---------------------------------------------------------------
+FROM python:3.12-slim AS runtime
+
+WORKDIR /app
+
+# Copy the virtual environment from the builder stage
+COPY --from=builder /app/venv /app/venv
+
+# Copy the application source code
+COPY producer/ ./producer/
+
+# Make sure Python uses the venv binaries
+ENV PATH="/app/venv/bin:$PATH"
+
+# Default env vars — overridden by docker-compose environment / .env
+ENV PYTHONUNBUFFERED=1
+# PYTHONUNBUFFERED=1 means Python won't buffer stdout/stderr.
+# Without this, print() output may not appear in docker logs immediately.
+
+# Default command: run the simulator.
+# Override with "python producer/seed.py" for the one-time seed run.
+CMD ["python", "producer/simulate.py"]
