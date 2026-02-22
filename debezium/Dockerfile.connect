@@ -1,0 +1,32 @@
+FROM quay.io/debezium/connect:3.1.0.Final
+
+USER root
+
+COPY ojdbc11.jar /kafka/libs/ojdbc11.jar
+
+ENV CONFLUENT_VERSION=7.6.0
+
+RUN curl -L -o /kafka/libs/kafka-avro-serializer.jar \
+    "https://packages.confluent.io/maven/io/confluent/kafka-avro-serializer/${CONFLUENT_VERSION}/kafka-avro-serializer-${CONFLUENT_VERSION}.jar" && \
+    curl -L -o /kafka/libs/kafka-schema-registry-client.jar \
+    "https://packages.confluent.io/maven/io/confluent/kafka-schema-registry-client/${CONFLUENT_VERSION}/kafka-schema-registry-client-${CONFLUENT_VERSION}.jar" && \
+    curl -L -o /kafka/libs/kafka-schema-serializer.jar \
+    "https://packages.confluent.io/maven/io/confluent/kafka-schema-serializer/${CONFLUENT_VERSION}/kafka-schema-serializer-${CONFLUENT_VERSION}.jar" && \
+    curl -L -o /kafka/libs/kafka-schema-converter.jar \
+    "https://packages.confluent.io/maven/io/confluent/kafka-schema-converter/${CONFLUENT_VERSION}/kafka-schema-converter-${CONFLUENT_VERSION}.jar" && \
+    curl -L -o /kafka/libs/common-config.jar \
+    "https://packages.confluent.io/maven/io/confluent/common-config/${CONFLUENT_VERSION}/common-config-${CONFLUENT_VERSION}.jar" && \
+    curl -L -o /kafka/libs/common-utils.jar \
+    "https://packages.confluent.io/maven/io/confluent/common-utils/${CONFLUENT_VERSION}/common-utils-${CONFLUENT_VERSION}.jar" && \
+    curl -L -o /kafka/libs/avro.jar \
+    "https://repo1.maven.org/maven2/org/apache/avro/avro/1.11.3/avro-1.11.3.jar" && \
+    curl -L -o /kafka/libs/kafka-connect-avro-converter.jar \
+    "https://packages.confluent.io/maven/io/confluent/kafka-connect-avro-converter/${CONFLUENT_VERSION}/kafka-connect-avro-converter-${CONFLUENT_VERSION}.jar" && \
+    curl -L -o /kafka/libs/kafka-connect-avro-data.jar \
+    "https://packages.confluent.io/maven/io/confluent/kafka-connect-avro-data/${CONFLUENT_VERSION}/kafka-connect-avro-data-${CONFLUENT_VERSION}.jar" && \
+    curl -L -o /kafka/libs/guava.jar \
+    "https://repo1.maven.org/maven2/com/google/guava/guava/32.1.3-jre/guava-32.1.3-jre.jar" && \
+    curl -L -o /kafka/libs/failureaccess.jar \
+    "https://repo1.maven.org/maven2/com/google/guava/failureaccess/1.0.2/failureaccess-1.0.2.jar"
+
+USER 1001

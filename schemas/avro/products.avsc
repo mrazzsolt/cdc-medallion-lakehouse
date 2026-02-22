@@ -1,0 +1,15 @@
+{
+  "type": "record",
+  "name": "Product",
+  "namespace": "app",
+  "fields": [
+    {"name": "ITEM_ID",       "type": "long"},
+    {"name": "PRODUCT_NAME",  "type": "string"},
+    {"name": "QUANTITY",      "type": "int"},
+    {"name": "UNIT_PRICE",    "type": {"type": "bytes", "logicalType": "decimal", "precision": 10, "scale": 2}},
+    {"name": "CREATED_AT",    "type": "long", "logicalType": "timestamp-micros"},
+    {"name": "CREATED_BY",    "type": "string"},
+    {"name": "MODIFIED_AT",   "type": ["null", "long"],   "default": null, "logicalType": "timestamp-micros"},
+    {"name": "MODIFIED_BY",   "type": ["null", "string"], "default": null}
+  ]
+}

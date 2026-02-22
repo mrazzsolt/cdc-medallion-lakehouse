@@ -1,0 +1,36 @@
+{
+  "name": "oracle-cdc-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.oracle.OracleConnector",
+    "tasks.max": "1",
+
+    "database.hostname": "oracle",
+    "database.port": "1521",
+    "database.user": "c##debezium",
+    "database.password": "dbzpassword",
+    "database.dbname": "XEPDB1",
+    "database.pdb.name": "XEPDB1",
+
+    "topic.prefix": "cdc",
+
+    "table.include.list": "APP.CUSTOMERS,APP.ORDERS,APP.PRODUCTS,APP.PRODUCT_CATEGORIES,APP.PRODUCTS_X_CATEGORY",
+
+    "snapshot.mode": "initial",
+
+    "schema.history.internal.kafka.bootstrap.servers": "kafka:9092",
+    "schema.history.internal.kafka.topic": "schema-history.oracle",
+
+    "key.converter": "io.confluent.connect.avro.AvroConverter",
+    "key.converter.schema.registry.url": "http://schema-registry:8081",
+    "value.converter": "io.confluent.connect.avro.AvroConverter",
+    "value.converter.schema.registry.url": "http://schema-registry:8081",
+
+
+    "topic.creation.enable": "true",
+    "topic.creation.default.replication.factor": "1",
+    "topic.creation.default.partitions": "1",
+
+    "errors.log.enable": "true",
+    "errors.log.include.messages": "true"
+  }
+}

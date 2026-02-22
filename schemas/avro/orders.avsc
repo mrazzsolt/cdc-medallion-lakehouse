@@ -1,0 +1,20 @@
+{
+  "type": "record",
+  "name": "Order",
+  "namespace": "app",
+  "fields": [
+    {"name": "ORDER_ID",        "type": "long"},
+    {"name": "CUSTOMER_ID",     "type": "long"},
+    {"name": "PRODUCT_ITEM_ID", "type": "long"},
+    {"name": "ORDERED_QUANTITY","type": "int"},
+    {"name": "ORDER_STATUS",    "type": "string"},
+    {"name": "CITY",            "type": ["null", "string"], "default": null},
+    {"name": "COUNTRY",         "type": ["null", "string"], "default": null},
+    {"name": "STREET",          "type": ["null", "string"], "default": null},
+    {"name": "ADDITIONAL_INFO", "type": ["null", "string"], "default": null},
+    {"name": "CREATED_AT",      "type": "long", "logicalType": "timestamp-micros"},
+    {"name": "CREATED_BY",      "type": "string"},
+    {"name": "MODIFIED_AT",     "type": ["null", "long"],   "default": null, "logicalType": "timestamp-micros"},
+    {"name": "MODIFIED_BY",     "type": ["null", "string"], "default": null}
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "type": "record",
+  "name": "ProductCategory",
+  "namespace": "app",
+  "fields": [
+    {"name": "CATEGORY_ID",   "type": "int"},
+    {"name": "CATEGORY_NAME", "type": "string"},
+    {"name": "CREATED_AT",    "type": "long", "logicalType": "timestamp-micros"},
+    {"name": "CREATED_BY",    "type": "string"},
+    {"name": "MODIFIED_AT",   "type": ["null", "long"],   "default": null, "logicalType": "timestamp-micros"},
+    {"name": "MODIFIED_BY",   "type": ["null", "string"], "default": null}
+  ]
+}

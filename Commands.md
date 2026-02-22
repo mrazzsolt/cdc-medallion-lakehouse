@@ -23,3 +23,10 @@
 ## Docker python commands
     docker compose run --rm python python producer/seed.py
     docker compose run --rm python python producer/simulate.py
+
+## Debezium connector check
+    curl.exe -s http://localhost:8083/connectors/oracle-cdc-connector/status
+
+## Avro check
+    curl.exe -s http://localhost:8081/subjects
+    curl.exe -s http://localhost:8081/subjects/cdc.APP.CUSTOMERS-value/versions/latest
