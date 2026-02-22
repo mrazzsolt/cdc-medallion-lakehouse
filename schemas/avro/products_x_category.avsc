@@ -1,0 +1,9 @@
+{
+  "type": "record",
+  "name": "ProductXCategory",
+  "namespace": "app",
+  "fields": [
+    {"name": "ITEM_ID",      "type": "int"},
+    {"name": "CATEGORY_ID",  "type": "int"}
+  ]
+}

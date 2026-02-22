@@ -52,6 +52,13 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
     volumes:
       - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 9092 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
 
 
   # =========================
@@ -61,7 +68,7 @@ services:
     # Debezium's pre-built Kafka Connect image with CDC connectors included
     build:
       context: ./debezium
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.connect
     container_name: connect
     restart: unless-stopped
 
@@ -166,6 +173,12 @@ services:
 
     volumes:
       - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   # =========================
   # 6) MINIO INIT (one-shot bucket creator)
@@ -191,7 +204,7 @@ services:
   python-seed:
     build:
       context: ./python
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.producer
     container_name: python-seed
     depends_on:
       oracle:
@@ -206,7 +219,7 @@ services:
   python-simulator:
     build:
       context: ./python
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.producer
     container_name: python-simulator
     depends_on:
       python-seed:
@@ -226,6 +239,82 @@ services:
       timeout: 10s
       retries: 5
       start_period: 15s
+
+  # =========================
+  # 7) AVRO SCHEMA REGISTRY
+  # =========================    
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.6.0
+    container_name: schema-registry
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:9092
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/subjects"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  # schema-init:
+  #   image: curlimages/curl:latest
+  #   container_name: schema-init
+  #   depends_on:
+  #     schema-registry:
+  #       condition: service_healthy
+  #   volumes:
+  #     - ./schemas/avro:/schemas
+  #   entrypoint: ["/bin/sh", "-c"]
+  #   command:
+  #     - |
+  #       echo "Registering Avro schemas..."
+    
+  #       for schema in customers orders products product_categories products_x_category; do
+  #         table=$$(echo $$schema | tr '[:lower:]' '[:upper:]')
+  #         echo "Registering $$table..."
+  #         SCHEMA_CONTENT=$$(cat /schemas/$${schema}.avsc | tr -d '\n\r' | sed 's/\"/\\\"/g')
+  #         PAYLOAD="{\"schema\": \"$$SCHEMA_CONTENT\"}"
+  #         curl -sf -X POST http://schema-registry:8081/subjects/cdc.APP.$${table}-value/versions \
+  #           -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+  #           -d "$$PAYLOAD" \
+  #           && echo "$$table OK" || echo "$$table FAILED"
+  #       done
+    
+  #       echo "Schema registration done."
+
+  #   restart: "no"
+
+  # =========================
+  # 7) BRONZE WRITER (Python Kafka consumer + MinIO producer)
+  # =========================    
+  bronze-writer:
+    build:
+      context: ./python
+      dockerfile: Dockerfile.consumer
+    container_name: bronze-writer
+    depends_on:
+      kafka:
+        condition: service_healthy
+      schema-registry:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      KAFKA_BOOTSTRAP: kafka:9092
+      SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_BUCKET: ${MINIO_BUCKET}
+    restart: unless-stopped
+
 
 volumes:
   oracle_data:   # Oracle datafiles

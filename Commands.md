@@ -26,3 +26,7 @@
 
 ## Debezium connector check
     curl.exe -s http://localhost:8083/connectors/oracle-cdc-connector/status
+
+## Avro check
+    curl.exe -s http://localhost:8081/subjects
+    curl.exe -s http://localhost:8081/subjects/cdc.APP.CUSTOMERS-value/versions/latest

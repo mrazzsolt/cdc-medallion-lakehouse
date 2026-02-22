@@ -1,0 +1,11 @@
+python-dotenv==1.0.1
+# Kafka consumer
+confluent-kafka==2.6.1
+fastavro==1.9.4
+
+# Parquet + MinIO
+pyarrow==18.1.0
+minio==7.2.13
+
+fastavro>=1.9.0
+requests>=2.31.0
