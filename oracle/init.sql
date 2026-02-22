@@ -37,6 +37,9 @@ GRANT CREATE SESSION TO c##debezium CONTAINER=ALL;
 -- Grant permission to switch into a PDB
 GRANT SET CONTAINER TO c##debezium CONTAINER=ALL;
 
+-- Allow Debezium to create the LOG_MINING_FLUSH helper table in USERS tablespace
+ALTER USER c##debezium QUOTA UNLIMITED ON USERS CONTAINER=ALL;
+
 -- LogMiner privileges: read on redo logs
 GRANT LOGMINING TO c##debezium CONTAINER=ALL;
 GRANT SELECT ANY TRANSACTION TO c##debezium CONTAINER=ALL;
@@ -57,6 +60,12 @@ GRANT SELECT ON v_$logmnr_parameters TO c##debezium CONTAINER=ALL;
 GRANT SELECT ON v_$archived_log TO c##debezium CONTAINER=ALL;
 GRANT SELECT ON v_$archive_dest_status TO c##debezium CONTAINER=ALL;
 
+-- Enable ARCHIVELOG mode — required by Debezium LogMiner CDC.
+-- Without this, Oracle only keeps redo logs in memory and Debezium cannot read them.
+SHUTDOWN IMMEDIATE;
+STARTUP MOUNT;
+ALTER DATABASE ARCHIVELOG;
+ALTER DATABASE OPEN;
 -- ---------------------------------------------------------------
 -- PART 2: Back to XEPDB1 (our application PDB)
 -- Everything from here on lives inside the pluggable database

@@ -26,12 +26,12 @@ services:
       - oracle_data:/opt/oracle/oradata
       - ./oracle/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
 
-    # Basic healthcheck — Oracle readiness is better tracked via logs on first start
     healthcheck:
-      test: ["CMD", "bash", "-lc", "echo 'ping'"]
+      test: ["CMD", "bash", "-c", "echo 'SELECT 1 FROM DUAL;' | sqlplus -s system/$ORACLE_PASSWORD@//localhost:1521/XEPDB1"]
       interval: 30s
       timeout: 10s
-      retries: 10
+      retries: 20
+      start_period: 120s
 
   # =========================
   # 2) KAFKA (Event streaming bus)
@@ -59,13 +59,18 @@ services:
   # =========================
   connect:
     # Debezium's pre-built Kafka Connect image with CDC connectors included
-    image: quay.io/debezium/connect:3.1.0.Final
+    build:
+      context: ./debezium
+      dockerfile: Dockerfile
     container_name: connect
     restart: unless-stopped
 
     # Wait for Kafka to be up before starting Connect
     depends_on:
-      - kafka
+      kafka:
+        condition: service_started
+      oracle:
+        condition: service_healthy
 
     # REST API port — used to register/manage connectors (e.g. curl or Postman)
     ports:
@@ -93,6 +98,33 @@ services:
       VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
       KEY_CONVERTER_SCHEMAS_ENABLE: "false"
       VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/connectors"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  connector-init:
+    image: curlimages/curl:latest
+    container_name: connector-init
+    depends_on:
+      connect:
+        # Only start after connect passes its healthcheck
+        condition: service_healthy
+      python-simulator:
+        # Ensure the simulator has started and can connect to Oracle before registering the connector
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+        echo 'Kafka Connect is healthy. Running register-connector.sh...' &&
+        sh /scripts/register-connector.sh &&
+        echo 'Done.'
+      "
+    volumes:
+      - ./scripts/register-connector.sh:/scripts/register-connector.sh:ro
+      - ./debezium/connector-config.json:/config/connector-config.json:ro
+    restart: "no"
 
   # =========================
   # 4) KAFKA UI (browser-based topic inspector)
@@ -154,24 +186,46 @@ services:
     # This container should run once and not restart
     restart: "no"
   # =========================
-  # PYTHON PRODUCER
+  # 7) PYTHON PRODUCER
   # =========================
-  python:
+  python-seed:
     build:
       context: ./python
       dockerfile: Dockerfile
-    container_name: python-producer
-    # Wait for Oracle to be ready before starting
+    container_name: python-seed
     depends_on:
-      - oracle
+      oracle:
+        condition: service_healthy
     environment:
       APP_USER: ${APP_USER}
       APP_USER_PASSWORD: ${APP_USER_PASSWORD}
-      # Inside Docker network: use service name instead of localhost
-      ORACLE_DSN: oracle:1521/XEPDB1
-    # Don't auto-restart — we control when seed vs simulate runs
+      ORACLE_DSN: ${ORACLE_DSN}
+    command: ["python", "producer/seed.py"]
     restart: "no"
 
+  python-simulator:
+    build:
+      context: ./python
+      dockerfile: Dockerfile
+    container_name: python-simulator
+    depends_on:
+      python-seed:
+        condition: service_completed_successfully
+      oracle:
+        condition: service_healthy
+    environment:
+      APP_USER: ${APP_USER}
+      APP_USER_PASSWORD: ${APP_USER_PASSWORD}
+      ORACLE_DSN: ${ORACLE_DSN}
+    command: ["python", "producer/simulate.py"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c",
+        "import oracledb, os; oracledb.connect(user=os.environ['APP_USER'], password=os.environ['APP_USER_PASSWORD'], dsn=os.environ['ORACLE_DSN'])"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
 
 volumes:
   oracle_data:   # Oracle datafiles
