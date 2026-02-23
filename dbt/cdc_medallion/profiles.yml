@@ -1,0 +1,17 @@
+cdc_medallion:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: '../datalake.duckdb'
+      schema: main
+      threads: 4
+      extensions:
+        - httpfs
+        - parquet
+      settings:
+        s3_endpoint: 'localhost:9000'
+        s3_access_key_id: "{{ env_var('MINIO_ROOT_USER', 'minioadmin') }}"
+        s3_secret_access_key: "{{ env_var('MINIO_ROOT_PASSWORD', 'minioadmin') }}"
+        s3_use_ssl: false
+        s3_url_style: 'path'
