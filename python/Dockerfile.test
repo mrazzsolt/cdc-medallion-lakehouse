@@ -1,0 +1,16 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY requirements.consumer.txt .
+RUN pip install --no-cache-dir -r requirements.consumer.txt && \
+    pip install --no-cache-dir pytest
+
+# ← "python/" prefix nélkül, mert a context már a python/ mappa
+COPY consumer/ ./consumer/
+COPY dlq/ ./dlq/
+COPY tests/ ./tests/
+
+ENV PYTHONPATH="/app/consumer:/app/dlq"
+
+CMD ["pytest", "tests/", "-v"]
