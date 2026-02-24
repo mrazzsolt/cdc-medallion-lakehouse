@@ -1,0 +1,21 @@
+FROM python:3.12-slim as builder
+
+WORKDIR /app
+
+COPY requirements.dlq.txt .
+
+RUN python -m venv /app/venv && \
+    /app/venv/bin/pip install --upgrade pip --no-cache-dir && \
+    /app/venv/bin/pip install --no-cache-dir -r requirements.dlq.txt
+
+FROM python:3.12-slim AS runtime
+
+WORKDIR /app
+
+COPY --from=builder /app/venv /app/venv
+COPY dlq/ ./dlq/
+
+ENV PATH="/app/venv/bin:$PATH"
+ENV PYTHONUNBUFFERED=1
+
+CMD ["python", "dlq/dlq_handler.py"]

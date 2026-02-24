@@ -59,6 +59,23 @@ services:
       retries: 10
       start_period: 30s
 
+  kafka-init:
+    image: apache/kafka:3.7.0
+    container_name: kafka-init
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      echo 'Creating DLQ topics...' &&
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic dlq.cdc.APP.CUSTOMERS --partitions 1 --replication-factor 1 &&
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic dlq.cdc.APP.ORDERS --partitions 1 --replication-factor 1 &&
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic dlq.cdc.APP.PRODUCTS --partitions 1 --replication-factor 1 &&
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic dlq.cdc.APP.PRODUCT_CATEGORIES --partitions 1 --replication-factor 1 &&
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic dlq.cdc.APP.PRODUCTS_X_CATEGORY --partitions 1 --replication-factor 1 &&
+      echo 'DLQ topics created.'
+      "
+    restart: "no"
 
 
   # =========================
@@ -241,7 +258,7 @@ services:
       start_period: 15s
 
   # =========================
-  # 7) AVRO SCHEMA REGISTRY
+  # 8) AVRO SCHEMA REGISTRY
   # =========================    
 
   schema-registry:
@@ -292,7 +309,7 @@ services:
   #   restart: "no"
 
   # =========================
-  # 7) BRONZE WRITER (Python Kafka consumer + MinIO producer)
+  # 9) BRONZE WRITER (Python Kafka consumer + MinIO producer)
   # =========================    
   bronze-writer:
     build:
@@ -314,6 +331,65 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
       MINIO_BUCKET: ${MINIO_BUCKET}
     restart: unless-stopped
+
+  # =========================
+  # 10) DLQ HANDLER (Python consumer for failed messages in the dead letter queue)
+  # =========================  
+
+  dlq-handler:
+    build:
+      context: ./python
+      dockerfile: Dockerfile.dlq
+    container_name: dlq-handler
+    depends_on:
+      kafka:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+      minio:
+        condition: service_healthy
+    environment:
+      KAFKA_BOOTSTRAP: kafka:9092
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_BUCKET: datalake
+    networks:
+      - default
+    restart: unless-stopped
+  # =========================
+  # 11) TEST RUNNER
+  # =========================
+  test-runner:
+    build:
+      context: ./python
+      dockerfile: Dockerfile.test
+    container_name: test-runner
+    profiles:
+      - test
+    restart: "no"
+  # =========================
+  # 12) ERROR SIMULATOR (DLQ teszteléshez)
+  # =========================
+  python-error-simulator:
+    build:
+      context: ./python
+      dockerfile: Dockerfile.error-simulator
+    container_name: python-error-simulator
+    depends_on:
+      kafka:
+        condition: service_healthy
+      python-seed:
+        condition: service_completed_successfully
+      oracle:
+        condition: service_healthy
+    environment:
+      KAFKA_BOOTSTRAP: kafka:9092
+    command: ["python", "producer/error_simulator.py"]
+    #profiles:
+    #  - error-sim
+    restart: "no"
+
 
 
 volumes:
