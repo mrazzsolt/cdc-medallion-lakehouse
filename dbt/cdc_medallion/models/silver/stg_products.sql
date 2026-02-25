@@ -1,14 +1,24 @@
+{{ config(
+    materialized='incremental',
+    unique_key=['item_id', 'valid_from'],
+    incremental_strategy='merge'
+) }}
+
 WITH raw AS (
     SELECT *
     FROM read_parquet(
             's3://datalake/bronze/products/**/*.parquet',
             union_by_name = true
-        )
+        ) 
+    {% if is_incremental() %}
+    WHERE CAST(_ingested_at AS TIMESTAMP) > (SELECT MAX(valid_from) FROM {{ this }})
+    {% endif %}
 ),
 filtered AS (
     SELECT *
     FROM raw
     WHERE item_id IS NOT NULL
+        AND item_id.value IS NOT NULL
         AND product_name IS NOT NULL
         AND TRIM(product_name) != ''
         AND quantity IS NOT NULL

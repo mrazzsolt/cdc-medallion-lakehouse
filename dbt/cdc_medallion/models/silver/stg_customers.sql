@@ -1,9 +1,21 @@
+{{ config(
+    materialized='incremental',
+    unique_key=['customer_id', 'valid_from'],
+    incremental_strategy='merge'
+) }}
+
+
 WITH raw AS (
     SELECT *
     FROM read_parquet(
             's3://datalake/bronze/customers/**/*.parquet',
             union_by_name = true
-        )
+        ) {% if is_incremental() %}
+WHERE CAST(_ingested_at AS TIMESTAMP) > (
+    SELECT MAX(valid_from) FROM {{ this }}
+)
+{% endif %}
+
 ),
 filtered AS (
     SELECT *
