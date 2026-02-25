@@ -27,13 +27,24 @@ run("Row counts", """
 """)
 
 # --------------------------------------------------
-# 2. CUSTOMERS — nincs duplikát customer_id szerint
+# 2. CUSTOMERS — SCD Type 2: csak is_current=TRUE sorok egyediek
 # --------------------------------------------------
-run("Duplicate customer_ids (expect 0 rows)", """
+run("Duplicate customer_ids in CURRENT rows only (expect 0 rows)", """
     SELECT customer_id, COUNT(*) AS cnt
     FROM silver.stg_customers
+    WHERE is_current = TRUE
     GROUP BY customer_id
     HAVING COUNT(*) > 1
+""")
+
+# --------------------------------------------------
+# 2b. SCD Type 2 historik ellenőrzés
+# --------------------------------------------------
+run("SCD Type 2 history for customer_id=1", """
+    SELECT customer_id, email, city, valid_from, valid_to, is_current
+    FROM silver.stg_customers
+    WHERE customer_id = 1
+    ORDER BY valid_from
 """)
 
 # --------------------------------------------------
@@ -61,10 +72,10 @@ run("Order status distribution", """
 # 5. ORDERS — egy order összes státuszváltása (historik)
 # --------------------------------------------------
 run("Order history for order_id=1", """
-    SELECT order_id, order_status, status_updated_at, order_created_at
+    SELECT order_id, order_status, valid_from, valid_to, is_current, order_created_at
     FROM silver.stg_orders
-    WHERE CAST(order_id AS BIGINT) = 1
-    ORDER BY status_updated_at
+    WHERE order_id = 1
+    ORDER BY valid_from
 """)
 
 

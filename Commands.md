@@ -30,3 +30,9 @@
 ## Avro check
     curl.exe -s http://localhost:8081/subjects
     curl.exe -s http://localhost:8081/subjects/cdc.APP.CUSTOMERS-value/versions/latest
+
+## dbt run and check
+    dbt run --select test_bronze_read --profiles-dir .
+    dbt debug --profiles-dir .
+    dbt run --profiles-dir . --full-refresh
+
